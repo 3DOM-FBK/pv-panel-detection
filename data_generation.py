@@ -54,23 +54,22 @@ with rasterio.open(geotiff_path) as src:
             window_w = window_size
             window_h = window_size
                 
-            # Leave out the last tile
-            # TODO - get the tile at width - window_w
+            start_x = x
+            start_y = y
+
             if x + window_size > src.width:
-                continue
+                start_x = src.width - window_size
 
-            # Leave out the last tile
-            # TODO - get the tile at width - window_h
             if y + window_size > src.height:
-                continue
+                start_y = src.height - window_size
 
-            print(x, y, "-", window_w, window_h)
+            print(start_x, start_y, "-", window_w, window_h)
             
             # Windowed reading of RGB values from the GeoTiFF
             # https://rasterio.readthedocs.io/en/stable/topics/windowed-rw.html
-            r = src.read(1, window=Window(x, y, window_w, window_h)).reshape((window_w * window_h, 1))
-            g = src.read(2, window=Window(x, y, window_w, window_h)).reshape((window_w * window_h, 1))
-            b = src.read(3, window=Window(x, y, window_w, window_h)).reshape((window_w * window_h, 1))
+            r = src.read(1, window=Window(start_x, start_y, window_w, window_h)).reshape((window_w * window_h, 1))
+            g = src.read(2, window=Window(start_x, start_y, window_w, window_h)).reshape((window_w * window_h, 1))
+            b = src.read(3, window=Window(start_x, start_y, window_w, window_h)).reshape((window_w * window_h, 1))
 
             # Create RGB image and empty mask
             rgb = np.stack((b, g, r), axis = 1).reshape(window_h, window_w, 3)
@@ -79,7 +78,7 @@ with rasterio.open(geotiff_path) as src:
             found = False
 
             # Create a Polygon with the world coordinates of the tile
-            tile = Polygon([src.xy(y, x), src.xy(y + window_h, x), src.xy(y + window_h, x + window_w), src.xy(y, x + window_w)])
+            tile = Polygon([src.xy(start_y, start_x), src.xy(start_y + window_h, start_x), src.xy(start_y + window_h, start_x + window_w), src.xy(start_y, start_x + window_w)])
             
             # Search all the PV Polygons that intersect the tile using the kd-tree
             result = tree.query(tile)
@@ -95,7 +94,7 @@ with rasterio.open(geotiff_path) as src:
                 for xi, yi in dilated.exterior.coords:
                     py, px = src.index(xi, yi)
 
-                    points.append([px - x, py - y])
+                    points.append([px - start_x, py - start_y])
                     
                 # Fill the polygon on the mask image
                 cv2.fillPoly(mask, pts=[np.array(points)], color=(255))

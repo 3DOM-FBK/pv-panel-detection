@@ -7,13 +7,12 @@ import rasterio
 from rasterio.windows import Window
 import numpy as np
 import cv2
-from shapely.geometry import shape, mapping, LineString, Polygon
+from shapely.geometry import mapping, Polygon
 from shapely.strtree import STRtree
 
 import torch
 import torch.nn.functional as F
 from PIL import Image
-from torchvision import transforms
 
 from utils.data_loading import BasicDataset
 from unet import UNet
@@ -57,8 +56,6 @@ def write_shapefile(output_folder, file_name, polygons, crs):
 
 def merge_polygons(polygons):
 
-    # Merge overlapping polygons
-
     # Create kd-tree with the polygons
     tree = STRtree([polygon for polygon in polygons])
     
@@ -68,48 +65,43 @@ def merge_polygons(polygons):
 
     for i in range(0, len(polygons)):
 
-        print("")
-        print("Processing polygon ", i)
-
-        if processed[i]:
-            print("Already processed, skipping.")
+        if processed[i]: # polygon already merged with another polygon
             continue
 
         polygon = polygons[i]
 
         while(True):
 
+            # get neighbours polygons
             neighbours_ids = tree.query_nearest(polygon, max_distance=25, exclusive=True)
 
-            print("Polygon has neighbours", i, neighbours_ids)
-
+            # if no neighbours found, stop processing current polygon and mark it as processed
             if len(neighbours_ids) == 0:
                 processed[i] = True
                 break
 
             intersection_found = False
 
-            print("Searching for intersections...")
+            # iterate over the neighbours to find intersections with the current polygon
             for neighbour_id in neighbours_ids:
 
-                if neighbour_id == i:
+                if neighbour_id == i: # skip the test with itself
                     continue
 
-                if processed[neighbour_id]:
+                if processed[neighbour_id]: # skip already processed polygons
                     continue
 
                 if polygon.intersects(polygons[neighbour_id]):
-                    print("Found intersection with ", neighbour_id)
-                    polygon = polygon.union(polygons[neighbour_id])
-                    processed[neighbour_id] = True
-                    intersection_found = True
+                    polygon = polygon.union(polygons[neighbour_id]) # merge neighbour with the current polygon and update current polygon
+                    processed[neighbour_id] = True # mark neighbour as processed
+                    intersection_found = True 
 
-            if not intersection_found:
+            if not intersection_found: # if no intersection found, stop processing current polygon
                 break
         
         merged_polygons.append(polygon)
 
-        processed[i] = True   
+        processed[i] = True # mark current polygon as processed
 
     return merged_polygons
 
@@ -128,23 +120,22 @@ def predict_on_geotiff(geotiff_path, window_size):
                 window_w = window_size
                 window_h = window_size
 
-                # Leave out the last tile
-                # TODO - get the tile at width - window_w
+                start_x = x
+                start_y = y
+
                 if x + window_size > src.width:
-                    continue
+                    start_x = src.width - window_size
 
-                # Leave out the last tile
-                # TODO - get the tile at width - window_h
                 if y + window_size > src.height:
-                    continue
+                    start_y = src.height - window_size
 
-                print(x, y, "-", window_w, window_h)
+                print(start_x, start_y, "-", window_w, window_h)
                 
                 # Windowed reading of RGB values from the GeoTiFF
                 # https://rasterio.readthedocs.io/en/stable/topics/windowed-rw.html
-                r = src.read(1, window=Window(x, y, window_w, window_h)).reshape((window_w * window_h, 1))
-                g = src.read(2, window=Window(x, y, window_w, window_h)).reshape((window_w * window_h, 1))
-                b = src.read(3, window=Window(x, y, window_w, window_h)).reshape((window_w * window_h, 1))
+                r = src.read(1, window=Window(start_x, start_y, window_w, window_h)).reshape((window_w * window_h, 1))
+                g = src.read(2, window=Window(start_x, start_y, window_w, window_h)).reshape((window_w * window_h, 1))
+                b = src.read(3, window=Window(start_x, start_y, window_w, window_h)).reshape((window_w * window_h, 1))
 
                 # Create RGB image and empty mask
                 rgb = np.stack((r, g, b), axis = 1).reshape(window_h, window_w, 3)
@@ -174,7 +165,7 @@ def predict_on_geotiff(geotiff_path, window_size):
                         if len(approx) < 4:
                             continue
 
-                        transformed = [src.xy(coord[1] + y, coord[0] + x) for coord in approx]
+                        transformed = [src.xy(coord[1] + start_y, coord[0] + start_x) for coord in approx]
                         geom = Polygon(transformed).buffer(0.15)
                         polygons.append(geom)
 
