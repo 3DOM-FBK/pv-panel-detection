@@ -27,7 +27,7 @@ def create_output_directories(output_path):
         os.mkdir(os.path.join(output_path, "masks"))
 
 
-def save_image_and_mask(output_path, rgb, mask, augmentation=False):
+def save_image_and_mask(output_path, rgb, mask, x, y, augmentation=False):
 
     cv2.imwrite(os.path.join(output_path, "images", f"shp_to_mask_{x}_{y}_0.png"), rgb)
     cv2.imwrite(os.path.join(output_path, "masks", f"shp_to_mask_{x}_{y}_0.png"), mask)
@@ -94,7 +94,7 @@ def generate_mask(start_x, start_y, window_w, window_h, tree, polygons):
     return mask, len(result) == 0
 
 
-def process_tiles(window_width, window_height, src, polygons):
+def process_tiles(window_width, window_height, src, polygons, generate_all_tiles):
 
     # Create kd-tree with the polygons
     tree = STRtree([polygon for polygon in polygons])
@@ -125,10 +125,10 @@ def process_tiles(window_width, window_height, src, polygons):
             rgb = np.stack((b, g, r), axis = 1).reshape(window_height, window_width, 3)
             mask, empty = generate_mask(start_x, start_y, window_width, window_height, tree, polygons)
 
-            # Write output image and mask only if the PV covers a certain amount of the image
-            if not empty and np.count_nonzero(mask) / (window_width * window_height) > 0.1:
+            # Write output image and mask only if the PV covers a certain amount of the image, or generate all tiles is True
+            if (not empty and np.count_nonzero(mask) / (window_width * window_height) > 0.1) or generate_all_tiles:
 
-                save_image_and_mask(output_path, rgb, mask, augmentation) 
+                save_image_and_mask(output_path, rgb, mask, start_x, start_y, augmentation) 
         
 
 def get_args():
@@ -139,7 +139,8 @@ def get_args():
     parser.add_argument('-o', '--output', help='Output path (folder)', required=True)
     parser.add_argument('-w', '--window-size', help='', default=128)
     parser.add_argument('-r', '--resolution-factor', help='', default=1.0)
-    parser.add_argument('-a', '--augmentation', help='Do data augmentation', action='store_true', default=False)
+    parser.add_argument('--augmentation', help='Do data augmentation', action='store_true', default=False)
+    parser.add_argument('--all', help='Generate all the tiles, also tiles without solar panels', action='store_true', default=False)
     
     return parser.parse_args()
 
@@ -154,6 +155,7 @@ if __name__ == '__main__':
     resolution_factor = float(args.resolution_factor)
     window_size = int(args.window_size)
     augmentation = args.augmentation
+    generate_all_tiles = args.all
     
     # Create output directories
     create_output_directories(output_path)
@@ -170,4 +172,4 @@ if __name__ == '__main__':
     
     with rasterio.open(geotiff_path) as src:
 
-        process_tiles(window_size, window_size, src, polygons)                   
+        process_tiles(window_size, window_size, src, polygons, generate_all_tiles)                   
