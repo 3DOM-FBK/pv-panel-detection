@@ -33,8 +33,8 @@ To train the Neural Network on a custom dataset make sure to respect the followi
 Example of image with corresponding mask
 <br/><br/>
 
-<img src="./asset/train_image.jpg"  width="250" height="150">
-<img src="./asset/train_mask.jpg"  width="250" height="150">
+<img src="./assets/train_image.png">
+<img src="./assets/train_mask.png">
 <br/><br/>
 Size and color space of images:
 
