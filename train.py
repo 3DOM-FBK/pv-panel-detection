@@ -17,14 +17,18 @@ from unet import UNet
 from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 
-dir_img = Path('./data/train/images/')
-dir_mask = Path('./data/train/masks/')
-dir_checkpoint = Path('./checkpoints/')
+
+def create_output_directory(output_path):
+    
+    if not os.path.exists(output_path):
+        os.mkdir(output_path)
 
 
 def train_model(
         model,
         device,
+        dir_img,
+        dir_mask,
         epochs: int = 5,
         batch_size: int = 1,
         learning_rate: float = 1e-5,
@@ -123,12 +127,14 @@ def train_model(
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
+    parser.add_argument('--data', '-d', type=str, help='Path of the folder containing training data (images and masks folders)', required=True)
+    parser.add_argument('--output', '-o', type=str, help='Path of the output folder where the model will be saved', default="chackpoints/")
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
-    parser.add_argument('--scale', '-s', type=float, default=0.5, help='Downscaling factor of the images')
+    parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
     parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
                         help='Percent of the data that is used as validation (0-100)')
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
@@ -140,6 +146,12 @@ def get_args():
 
 if __name__ == '__main__':
     args = get_args()
+
+    dir_img = os.path.join(args.data, "images")
+    dir_mask = os.path.join(args.data, "masks")
+    dir_checkpoint = args.output
+
+    create_output_directory(dir_checkpoint)
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -159,6 +171,8 @@ if __name__ == '__main__':
     model.to(device=device)
     train_model(
         model=model,
+        dir_img=dir_img,
+        dir_mask=dir_mask,
         epochs=args.epochs,
         batch_size=args.batch_size,
         learning_rate=args.lr,
