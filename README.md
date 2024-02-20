@@ -1,4 +1,9 @@
 # Solar and photovoltaic panels segmentation
+<br/>
+
+## <b>IMPORTANT: For now only ONE class training is supported</b>
+
+<br/>
 
 **Installation**
 <br/><br/>
@@ -8,7 +13,19 @@ It's based on U-Net image segmentation with PyTorch 2.2.0 and CUDA 12.1
 To install all the packages needed by the project use:
 
     pip install -r requirements.txt
-<br/><br/>
+
+**Training data generation**
+
+To generate image tiles with corresponding masks from a GeoTIFF and a Shapefile:
+
+    - Make sure the GeoTIFF and the Shapefile are in the same reference system
+    - Make sure the Shapefile contains only the polygons of the class you want to segment
+    
+then use the following script:
+
+    python data_generation.py --geotiff <GeoTIFF file path> --shapefile <Shapefile file path> -- output <output folder> -w <tiles size (ex. 128)>
+
+
 **Training**
 <br/><br/>
 To train the Neural Network on a custom dataset make sure to respect the following folder structure for the training data:
@@ -53,6 +70,8 @@ Mask and classes values values (tested only for these values it might also work 
 Run the following script:
 
     python train.py --data <data folder> --epochs 100 --batch-size 4
+
+The models will be saved under the checkpoints folder (created if it does not exists). Otherwise a custom output folder can be specified with the --output parameter.
 <br/><br/>
 **Prediction**
 <br/><br/>
