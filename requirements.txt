@@ -12,3 +12,4 @@ imutils==0.5.4
 opencv-contrib-python==4.9.0.80
 tqdm==4.66.1
 scikit-learn==1.4.0
+geopandas==0.14.3
