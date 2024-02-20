@@ -3,6 +3,7 @@
 **Installation**
 <br/><br/>
 This project was developed using a Conda environment with Python 3.11
+It's based on U-Net image segmentation with PyTorch 2.2.0 and CUDA 12.1
 
 To install all the packages needed by the project use:
 

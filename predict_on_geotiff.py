@@ -41,14 +41,16 @@ def predict_img(net,
 
 def write_shapefile(output_folder, file_name, polygons, crs):
     
-    schema = {"geometry": "Polygon", "properties": {}}
+    schema = {"geometry": "Polygon", "properties": { "area" : "float" }}
 
     with fiona.open(os.path.join(output_folder, f"{file_name}.shp"), "w", driver="Shapefile", crs=crs, schema=schema) as dst:
 
         for polygon in polygons:
             feature = { 
                 "geometry": mapping(polygon),
-                "properties": {}
+                "properties": {
+                    "area": float(polygon.area)
+                }
             }
                 
             dst.write(feature)
@@ -90,6 +92,10 @@ def merge_polygons(polygons):
 
                 if processed[neighbour_id]: # skip already processed polygons
                     continue
+                
+                if polygons[neighbour_id].area < 1.5:
+                    processed[neighbour_id] = True
+                    continue
 
                 if polygon.intersects(polygons[neighbour_id]):
                     polygon = polygon.union(polygons[neighbour_id]) # merge neighbour with the current polygon and update current polygon
@@ -99,6 +105,12 @@ def merge_polygons(polygons):
             if not intersection_found: # if no intersection found, stop processing current polygon
                 break
         
+        polygon = polygon.buffer(-0.1)
+
+        if polygon.area < 1.0:
+            processed[i] = True
+            continue
+
         merged_polygons.append(polygon)
 
         processed[i] = True # mark current polygon as processed
@@ -176,19 +188,15 @@ def predict_on_geotiff(geotiff_path, window_size):
 
 def get_args():
     parser = argparse.ArgumentParser(description='Predict PV from a GeoTIFF image and return Shapefile with PV polygons')
-    parser.add_argument('--model', '-m', default='MODEL.pth', metavar='FILE',
-                        help='Specify the file in which the model is stored')
+    parser.add_argument('--model', '-m', default='MODEL.pth', metavar='FILE', help='Specify the file in which the model is stored')
     parser.add_argument('--input', '-i', help='Input GeoTIFF image', required=True)
     parser.add_argument('--output', '-o', help='Output folder', required=True)
-    parser.add_argument('--viz', '-v', action='store_true',
-                        help='Visualize the images as they are processed')
-    parser.add_argument('--mask-threshold', '-t', type=float, default=0.5,
-                        help='Minimum probability value to consider a mask pixel white')
-    parser.add_argument('--scale', '-s', type=float, default=1.0,
-                        help='Scale factor for the input images')
+    parser.add_argument('--viz', '-v', action='store_true', help='Visualize the images as they are processed')
+    parser.add_argument('--mask-threshold', '-t', type=float, default=0.5, help='Minimum probability value to consider a mask pixel white')
+    parser.add_argument('--scale', '-s', type=float, default=1.0, help='Scale factor for the input images')
     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
-    parser.add_argument('-w', '--window-size', help='Size of the sliding window', default=128)
+    parser.add_argument('--window-size', '-w', help='Size of the sliding window', type=int, default=128)
     
     return parser.parse_args()
 

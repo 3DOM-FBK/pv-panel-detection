@@ -134,11 +134,11 @@ def process_tiles(window_width, window_height, src, polygons, generate_all_tiles
 def get_args():
 
     parser = ArgumentParser(description="Script to generate the data (images and masks) for training.")
-    parser.add_argument('-g', '--geotiff', help='Path of the GeoTIFF file', required=True)
-    parser.add_argument('-s', '--shapefile', help='Path of the Shapefile', required=True)
-    parser.add_argument('-o', '--output', help='Output path (folder)', required=True)
-    parser.add_argument('-w', '--window-size', help='', default=128)
-    parser.add_argument('-r', '--resolution-factor', help='', default=1.0)
+    parser.add_argument('--geotiff', '-g', help='Path of the GeoTIFF file', required=True)
+    parser.add_argument('--shapefile', '-s', help='Path of the Shapefile', required=True)
+    parser.add_argument('--output', '-o', help='Output path (folder)', required=True)
+    parser.add_argument('--window-size', '-w', help='', default=128)
+    parser.add_argument('--resolution-factor', '-r', help='', default=1.0)
     parser.add_argument('--augmentation', help='Do data augmentation', action='store_true', default=False)
     parser.add_argument('--all', help='Generate all the tiles, also tiles without solar panels', action='store_true', default=False)
     
