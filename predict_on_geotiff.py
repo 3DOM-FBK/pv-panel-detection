@@ -107,13 +107,12 @@ def merge_polygons(polygons):
         
         polygon = polygon.buffer(-0.1)
 
+        processed[i] = True # mark current polygon as processed
+
         if polygon.area < 1.0:
-            processed[i] = True
             continue
 
-        merged_polygons.append(polygon)
-
-        processed[i] = True # mark current polygon as processed
+        merged_polygons.append(polygon)        
 
     return merged_polygons
 

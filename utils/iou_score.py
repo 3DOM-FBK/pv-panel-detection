@@ -31,7 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('-i_inf','--in_shp_infer', type=pathlib.Path, 
                       required=True, help='SHP file in input of the inferrence')
     parser.add_argument('-s','--save_out', type=bool, 
-                      required=True, help='Boolean saving output or not')
+                      default=False, help='Boolean saving output or not')
     parser.add_argument('-o_u','--out_U', type=pathlib.Path,
                       required=False, help='where to save the union file generated',default='-')
     parser.add_argument('-o_i','--out_I', type=pathlib.Path,
